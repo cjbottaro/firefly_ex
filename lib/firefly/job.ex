@@ -3,6 +3,8 @@ defmodule Firefly.Job do
 
   alias Firefly.Step
 
+  @type t :: %__MODULE__{}
+
   def new do
     %__MODULE__{}
   end
