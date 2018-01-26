@@ -70,6 +70,18 @@ defmodule Firefly.Plugin.ImageMagick do
     %{job | metadata: metadata}
   end
 
+  @doc ~S"""
+  (processor) Rotate an image.
+
+  Ex:
+  ```
+  MyApp.fetch_file("~/puppy.png") |> MyApp.rotate(90)
+  """
+  @spec rotate(Job.t, String.t | integer) :: Job.t
+  processor rotate(job, degrees) do
+    %{job | content: magick(:convert, "-rotate #{degrees}", job.content)}
+  end
+
   @resize_spec ~r/\A(\d+[%@x]|x\d+|\d+x\d+[\^!><%]?)\z/
   @resize_crop_spec ~r/\A\d+x\d+#(\w{1,2})?\z/
   @crop_offset_spec ~r/\A\d+x\d+[+-]\d+[+-]\d+\z/
@@ -117,11 +129,14 @@ defmodule Firefly.Plugin.ImageMagick do
 
     Utils.with_tmpfile(2, fn {i_file, o_file} ->
       File.write!(i_file, data)
+
+      # https://stackoverflow.com/a/16689602/788380
       o_file_with_format = if options[:format] do
         options[:format] <> ":#{o_file}"
       else
         o_file
       end
+      
       args = ["convert"] ++ args ++ [i_file, o_file_with_format]
       err_args = Enum.join(args, " ")
       case System.cmd("magick", args) do
