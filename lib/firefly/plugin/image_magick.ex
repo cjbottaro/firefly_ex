@@ -1,7 +1,7 @@
 defmodule Firefly.Plugin.ImageMagick do
   use Firefly.Plugin
 
-  alias Firefly.Job
+  alias Firefly.{Job, Utils}
 
   @doc ~S"""
   (processor) Create a thumbnail by resizing and/or cropping.
@@ -30,10 +30,44 @@ defmodule Firefly.Plugin.ImageMagick do
   """
   @spec thumb(Job.t, String.t) :: Job.t
   processor thumb(job, spec) do
-    content = spec
-      |> spec_to_args
-      |> convert(job.content)
-    %{job | content: content}
+    args = thumb_spec_to_args(spec)
+    %{job | content: magick(:convert, args, job.content)}
+  end
+
+  @doc """
+  (processor) Convert image to different format.
+
+  Ex:
+  ```
+  encode(job, "tiff")
+  ```
+  """
+  @spec encode(Job.t, String.t) :: Job.t
+  processor encode(job, format) do
+    %{job | content: magick(:convert, "", job.content, format: format)}
+  end
+
+  @doc ~S"""
+  (processor) Put identifying information in metadata.
+
+  Ex:
+  ```
+  job = MyApp.fetch_file("~/puppy.png") |> MyApp.identify
+  job.metadata.identify # => %{height: 640, size: 582556, type: "PNG", width: 428}
+  ```
+  """
+  @spec identify(Job.t) :: Job.t
+  processor identify(job) do
+    {size, type, width, height} = :identify
+      |> magick(["-format", "%b %m %w %h"], job.content)
+      |> String.split
+      |> List.to_tuple
+    size = String.trim_trailing(size, "B") |> String.to_integer
+    width = String.to_integer(width)
+    height = String.to_integer(height)
+    info = %{size: size, type: type, width: width, height: height}
+    metadata = Map.put(job.metadata, :identify, info)
+    %{job | metadata: metadata}
   end
 
   @resize_spec ~r/\A(\d+[%@x]|x\d+|\d+x\d+[\^!><%]?)\z/
@@ -42,7 +76,7 @@ defmodule Firefly.Plugin.ImageMagick do
   @crop_gravity_spec ~r/\A\d+x\d+\*(\w{1,2})?\z/
 
   @doc false
-  def spec_to_args(spec) do
+  def thumb_spec_to_args(spec) do
     cond do
       Regex.match?(@resize_spec, spec) -> "-resize #{spec}"
       Regex.match?(@resize_crop_spec, spec) -> resize_crop_args(spec)
@@ -63,23 +97,42 @@ defmodule Firefly.Plugin.ImageMagick do
     "-crop #{geometry}+0+0 -gravity #{gravity}"
   end
 
+  defp magick(:identify, args, data) do
+    args = normalize_magick_args(args)
+
+    Utils.with_tmpfile(fn file ->
+      File.write!(file, data)
+      args = ["identify"] ++ args ++ [file]
+      err_args = Enum.join(args, " ")
+      case System.cmd("magick", args) do
+        {output, 0} -> output
+        _ -> raise "Command failed: magick #{err_args}"
+      end
+    end)
+  end
+
   # This is gross and inefficient, but it works for now.
-  defp convert(args, data) do
-    alias Firefly.Utils
-    i_file = Utils.tmpfile
-    o_file = Utils.tmpfile
-    try do
+  defp magick(:convert, args, data, options \\ []) do
+    args = normalize_magick_args(args)
+
+    Utils.with_tmpfile(2, fn {i_file, o_file} ->
       File.write!(i_file, data)
-      args = "convert #{args} #{i_file} #{o_file}" |> String.split
+      o_file_with_format = if options[:format] do
+        options[:format] <> ":#{o_file}"
+      else
+        o_file
+      end
+      args = ["convert"] ++ args ++ [i_file, o_file_with_format]
+      err_args = Enum.join(args, " ")
       case System.cmd("magick", args) do
         {_, 0} -> File.read!(o_file)
-        _ -> raise "Command failed: magick #{args}"
+        _ -> raise "Command failed: magick #{err_args}"
       end
-    after
-      File.rm(i_file)
-      File.rm(o_file)
-    end
+    end)
   end
+
+  defp normalize_magick_args(args) when is_binary(args), do: String.split(args)
+  defp normalize_magick_args(args) when is_list(args), do: args
 
   @gravity_map %{
     "nw" => "NorthWest",
