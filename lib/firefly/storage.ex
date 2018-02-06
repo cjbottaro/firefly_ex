@@ -1,4 +1,11 @@
 defmodule Firefly.Storage do
+  @moduledoc """
+  Behaviour for defining a storage backend.
+
+  Firefly comes with a few storage backends out of the box, but feel free to
+  contribute more (as seperate packages).
+  """
+
   def __using__(_options) do
     quote do
       @behaviour Firefly.Storage
@@ -16,21 +23,5 @@ defmodule Firefly.Storage do
   @callback write(app, content, metadata, options) :: uid
   @callback read(app, uid) :: {content, metadata} | nil
   @callback delete(app, uid) :: any
-
-  @doc false
-  def store(app, content, metadata, options) do
-    app.config.storage.write(app, content, metadata, options)
-  end
-
-  @doc false
-  def fetch(app, uid) do
-    app.new_job
-      |> Firefly.Job.add_step(Firefly.Plugin.Storage, :fetch, [uid])
-  end
-
-  @doc false
-  def delete(app, uid) do
-    app.config.storage.delete(app, uid)
-  end
 
 end

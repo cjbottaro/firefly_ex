@@ -1,41 +1,57 @@
 defmodule Firefly.Job do
+  @moduledoc """
+  What apps work with.
+  """
+
   defstruct [app: nil, steps: [], content: "", metadata: %{}]
 
   alias Firefly.Step
 
-  @type t :: %__MODULE__{}
+  @type t :: %__MODULE__{
+    app: Firefly.App.t,
+    content: Firefly.Storage.content,
+    metadata: Firefly.Storage.metadata,
+    steps: [Firefly.Step.t]
+  }
 
+  @doc false
   def new do
     %__MODULE__{}
   end
 
-  def add_step(%{steps: steps} = job, module, func, args) do
-    step = %Step{module: module, func: func, args: args}
+  @doc false
+  def add_step(%{steps: steps} = job, plugin, func, args) do
+    step = %Step{plugin: plugin, func: func, args: args}
     %{job | steps: [step | steps]}
   end
 
+  @doc false
   def run(job) do
     steps = Enum.reverse(job.steps)
     run(job, steps)
   end
 
+  @doc false
   def encode(job) do
-    job.steps
-      |> Enum.map(fn job -> {job.module, job.func, job.args} end)
+    steps = job.steps
+      |> Enum.map(fn step -> {step.plugin, step.func, step.args} end)
       |> :erlang.term_to_binary
       |> :zlib.zip
       |> Base.url_encode64
+    {job.app, steps}
   end
 
+  @doc false
   def decode(encoded_steps) do
-    steps = encoded_steps
+    {app, steps} = encoded_steps
       |> Base.url_decode64!
       |> :zlib.unzip
       |> :erlang.binary_to_term
-      |> Enum.map(&Step.from_tuple/1)
-    %__MODULE__{steps: steps}
+    steps = Enum.map(steps, &Step.from_tuple/1)
+    %__MODULE__{app: app, steps: steps}
   end
 
+  @doc false
   def path(job) do
     "/firefly/" <> encode(job)
   end
@@ -43,7 +59,7 @@ defmodule Firefly.Job do
   defp run(job, []), do: job
   defp run(job, [%{applied: true} | steps]), do: run(job, steps)
   defp run(job, [step | steps]) do
-    apply(step.module, step.func, [job] ++ step.args)
+    apply(step.plugin, step.func, [job] ++ step.args)
       |> mark_step_applied
       |> run(steps)
   end

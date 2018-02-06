@@ -1,7 +1,19 @@
 defmodule Firefly.Step do
-  defstruct [module: nil, func: nil, args: [], applied: false]
+  @moduledoc """
+  A step in a job.
+  """
+  
+  defstruct [plugin: nil, func: nil, args: [], applied: false]
 
-  def from_tuple({module, func, args}) do
-    %__MODULE__{module: module, func: func, args: args}
+  @type t :: %__MODULE__{
+    plugin: module,
+    func: atom,
+    args: [term],
+    applied: boolean
+  }
+
+  @doc false
+  def from_tuple({plugin, func, args}) do
+    %__MODULE__{plugin: plugin, func: func, args: args}
   end
 end

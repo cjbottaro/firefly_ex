@@ -66,8 +66,7 @@ defmodule Firefly.Plugin.ImageMagick do
     width = String.to_integer(width)
     height = String.to_integer(height)
     info = %{size: size, type: type, width: width, height: height}
-    metadata = Map.put(job.metadata, :identify, info)
-    %{job | metadata: metadata}
+    merge_meta(job, info)
   end
 
   @doc ~S"""

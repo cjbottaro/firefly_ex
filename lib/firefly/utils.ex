@@ -1,7 +1,7 @@
 defmodule Firefly.Utils do
 
   def tsplit(string, options \\ []) do
-    String.split(string. options) |> List.to_tuple
+    String.split(string, options) |> List.to_tuple
   end
 
   def tmpfile do
