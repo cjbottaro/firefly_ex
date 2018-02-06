@@ -1,5 +1,9 @@
 defmodule Firefly.Utils do
 
+  def tsplit(string, options \\ []) do
+    String.split(string. options) |> List.to_tuple
+  end
+
   def tmpfile do
     basename = :crypto.strong_rand_bytes(5) |> Base.encode16(case: :lower)
     path = System.tmp_dir! |> Path.join(["firefly-", basename])

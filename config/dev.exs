@@ -1,5 +1,5 @@
 use Mix.Config
 
-config :firefly, FireflyRepo,
+config :firefly, FireflyApp,
   storage: Firefly.Storage.Ets,
-  plugins: [Firefly.Plugin.ImageMagick]
+  plugins: [Firefly.Plugin.File, Firefly.Plugin.ImageMagick]

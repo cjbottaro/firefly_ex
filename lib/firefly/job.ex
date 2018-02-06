@@ -1,5 +1,5 @@
 defmodule Firefly.Job do
-  defstruct [steps: [], content: "", metadata: %{}]
+  defstruct [app: nil, steps: [], content: "", metadata: %{}]
 
   alias Firefly.Step
 
@@ -36,16 +36,16 @@ defmodule Firefly.Job do
     %__MODULE__{steps: steps}
   end
 
+  def path(job) do
+    "/firefly/" <> encode(job)
+  end
+
   defp run(job, []), do: job
   defp run(job, [%{applied: true} | steps]), do: run(job, steps)
   defp run(job, [step | steps]) do
-    result = apply(step.module, :"apply_#{step.func}", [job] ++ step.args)
-
-    if Step.type(step) == :analyzer do
-      result
-    else
-      mark_step_applied(result) |> run(steps)
-    end
+    apply(step.module, step.func, [job] ++ step.args)
+      |> mark_step_applied
+      |> run(steps)
   end
 
   defp mark_step_applied(job) do

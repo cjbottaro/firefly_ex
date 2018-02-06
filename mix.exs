@@ -8,6 +8,7 @@ defmodule Firefly.MixProject do
       elixir: "~> 1.6",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
+      elixirc_paths: elixirc_paths(Mix.env),
 
       # Hex
       description: "Image/asset management for Elixir, heavily inspired by Ruby's Dragonfly",
@@ -30,8 +31,13 @@ defmodule Firefly.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:exmagick, "~> 0.0.5"},
+      {:plug, "~> 1.4"},
       {:ex_doc, "~> 0.18.1", only: :dev},
     ]
   end
+
+  # Specifies which paths to compile per environment.
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_),     do: ["lib"]
+
 end

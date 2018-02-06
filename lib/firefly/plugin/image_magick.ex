@@ -4,7 +4,7 @@ defmodule Firefly.Plugin.ImageMagick do
   alias Firefly.{Job, Utils}
 
   @doc ~S"""
-  (processor) Create a thumbnail by resizing and/or cropping.
+  Create a thumbnail by resizing and/or cropping.
 
   `spec` can be described in the following examples:
 
@@ -29,13 +29,13 @@ defmodule Firefly.Plugin.ImageMagick do
   ```
   """
   @spec thumb(Job.t, String.t) :: Job.t
-  processor thumb(job, spec) do
+  def thumb(job, spec) do
     args = thumb_spec_to_args(spec)
     %{job | content: magick(:convert, args, job.content)}
   end
 
   @doc """
-  (processor) Convert image to different format.
+  Convert image to different format.
 
   Ex:
   ```
@@ -43,12 +43,12 @@ defmodule Firefly.Plugin.ImageMagick do
   ```
   """
   @spec encode(Job.t, String.t) :: Job.t
-  processor encode(job, format) do
+  def encode(job, format) do
     %{job | content: magick(:convert, "", job.content, format: format)}
   end
 
   @doc ~S"""
-  (processor) Put identifying information in metadata.
+  Put identifying information in metadata.
 
   Ex:
   ```
@@ -57,7 +57,7 @@ defmodule Firefly.Plugin.ImageMagick do
   ```
   """
   @spec identify(Job.t) :: Job.t
-  processor identify(job) do
+  def identify(job) do
     {size, type, width, height} = :identify
       |> magick(["-format", "%b %m %w %h"], job.content)
       |> String.split
@@ -71,14 +71,14 @@ defmodule Firefly.Plugin.ImageMagick do
   end
 
   @doc ~S"""
-  (processor) Rotate an image.
+  Rotate an image.
 
   Ex:
   ```
   MyApp.fetch_file("~/puppy.png") |> MyApp.rotate(90)
   """
   @spec rotate(Job.t, String.t | integer) :: Job.t
-  processor rotate(job, degrees) do
+  def rotate(job, degrees) do
     %{job | content: magick(:convert, "-rotate #{degrees}", job.content)}
   end
 
@@ -136,7 +136,7 @@ defmodule Firefly.Plugin.ImageMagick do
       else
         o_file
       end
-      
+
       args = ["convert"] ++ args ++ [i_file, o_file_with_format]
       err_args = Enum.join(args, " ")
       case System.cmd("magick", args) do

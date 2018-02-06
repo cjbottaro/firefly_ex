@@ -1,40 +1,52 @@
 defmodule Firefly.App do
 
   defmacro __using__(_) do
-    plugins = [Firefly, Firefly.Plugin.ImageMagick]
+    quote bind_quoted: [] do
+      def init(config), do: config
+      defoverridable [init: 1]
 
-    delegates = Enum.reduce(plugins, [], fn mod, acc ->
-      fn_names = mod.generators ++ mod.processors ++ mod.analyzers
-      Enum.reduce(mod.__info__(:functions), acc, fn {fn_name, arity}, acc ->
-        if Enum.member?(fn_names, fn_name) do
-          [{mod, make_sig(fn_name, arity)} | acc]
-        else
-          acc
-        end
-      end)
-    end)
+      def new_job do
+        %Firefly.Job{app: __MODULE__}
+      end
 
-    # bind_quoted is necessary to make this work.
-    quote bind_quoted: [delegates: delegates] do
-      Enum.each(delegates, fn {mod, sig} ->
-        defdelegate unquote(sig), to: mod
-      end)
+      Firefly.App.delegates_for_app(__MODULE__)
+        |> Enum.each(fn {sig, plugin} ->
+          {name, _, args} = sig
+          job = Enum.at(args, 0)
+          args = Enum.slice(args, 1..-1)
+          def unquote(sig) do
+            Firefly.Job.add_step(
+              unquote(job),
+              unquote(plugin),
+              unquote(name),
+              unquote(args)
+            )
+          end
+        end)
     end
   end
 
-  defp make_sig(name, 0) do
-    "#{name}()"
-      |> Code.string_to_quoted!
-      |> Macro.escape
+  def delegates_for_app(app) do
+    Application.get_env(:firefly, app, [])
+      |> Access.get(:plugins, [])
+      |> Enum.flat_map(&delegates_for_plugin/1)
   end
 
-  defp make_sig(name, arity) do
+  defp delegates_for_plugin(plugin) do
+    Enum.map(plugin.__info__(:functions), &{make_sig(&1), plugin})
+  end
+
+  defp make_sig({name, 0}) do
+    "#{name}()"
+      |> Code.string_to_quoted!
+  end
+
+  defp make_sig({name, arity}) do
     args = 1..arity
       |> Enum.map(&("a#{&1}"))
       |> Enum.join(",")
     "#{name}(#{args})"
       |> Code.string_to_quoted!
-      |> Macro.escape
   end
 
 end
