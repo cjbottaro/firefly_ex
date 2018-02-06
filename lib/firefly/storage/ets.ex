@@ -1,25 +1,25 @@
 defmodule Firefly.Storage.Ets do
   use Firefly.Storage
 
-  def init(_options \\ []) do
-    :ets.new(__MODULE__, [:public, :named_table])
+  def init(app) do
+    :ets.new(app, [:public, :named_table])
   end
 
-  def write(contents, metadata, _options) do
+  def write(app, contents, metadata, _options) do
     uid = new_uid()
-    :ets.insert(__MODULE__, {uid, contents, metadata})
+    :ets.insert(app, {uid, contents, metadata})
     uid
   end
 
-  def read(uid) do
-    case :ets.lookup(__MODULE__, uid) do
+  def read(app, uid) do
+    case :ets.lookup(app, uid) do
       [] -> nil
       [{_, content, metadata} | []] -> {content, metadata}
     end
   end
 
-  def delete(uid) do
-    :ets.delete(__MODULE__, uid)
+  def delete(app, uid) do
+    :ets.delete(app, uid)
   end
 
   defp new_uid do

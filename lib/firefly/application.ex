@@ -6,7 +6,7 @@ defmodule Firefly.Application do
   use Application
 
   def start(_type, _args) do
-    Firefly.Storage.Ets.init()
+    Firefly.Configuration.init
 
     # List all child processes to be supervised
     children = [

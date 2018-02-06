@@ -3,7 +3,7 @@ defmodule Firefly.Plugin.File do
   @doc """
   Read a file from the filesystem.
   """
-  def fetch_file(job, path) do
+  def read_file(job, path) do
     %{ job | content: path |> Path.expand |> File.read! }
   end
 
@@ -17,7 +17,7 @@ defmodule Firefly.Plugin.File do
 
   def size(job) do
     metadata = Map.put(job.metadata, :size, byte_size(job.content))
-    %{job | metadata: metadata}
+    %{ job | metadata: metadata }
   end
 
 end

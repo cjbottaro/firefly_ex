@@ -1,12 +1,15 @@
 defmodule Firefly.App do
 
+  @opaque t :: term
+
   defmacro __using__(_) do
     quote bind_quoted: [] do
       def init(config), do: config
       defoverridable [init: 1]
 
-      def new_job do
+      def new_job(options \\ []) do
         %Firefly.Job{app: __MODULE__}
+          |> Map.merge(options |> Map.new)
       end
 
       Firefly.App.delegates_for_app(__MODULE__)
@@ -23,13 +26,31 @@ defmodule Firefly.App do
             )
           end
         end)
+
+      Module.register_attribute(__MODULE__, :firefly_app, persist: true)
+      Module.put_attribute(__MODULE__, :firefly_app, true)
+
+      def config, do: Application.get_env(:firefly, __MODULE__)
+
+      def store(content, metadata, options \\ []) do
+        Firefly.Storage.store(__MODULE__, content, metadata, options)
+      end
+
+      def fetch(uid) do
+        Firefly.Storage.fetch(__MODULE__, uid)
+      end
+
+      def delete(uid) do
+        Firefly.Storage.delete(__MODULE__, uid)
+      end
+
     end
   end
 
   def delegates_for_app(app) do
-    Application.get_env(:firefly, app, [])
-      |> Access.get(:plugins, [])
-      |> Enum.flat_map(&delegates_for_plugin/1)
+    config = Application.get_env(:firefly, app, [])
+    plugins = [Firefly.Plugin.Storage | config[:plugins]] |> IO.inspect
+    Enum.flat_map(plugins, &delegates_for_plugin/1)
   end
 
   defp delegates_for_plugin(plugin) do
