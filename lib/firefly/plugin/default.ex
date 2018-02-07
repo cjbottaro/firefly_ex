@@ -35,6 +35,7 @@ defmodule Firefly.Plugin.Default do
     end)
 
     if content_type do
+      content_type = String.split(content_type, ";") |> List.first
       %{ job | content: body } |> put_meta(:"content-type", content_type)
     else
       %{ job | content: body }

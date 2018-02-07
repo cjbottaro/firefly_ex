@@ -70,7 +70,7 @@ defmodule Firefly.App do
       end
 
       def fetch(uid) do
-        Firefly.App.fetch(__MODULE__, uid)
+        fetch(new_job(), uid) # fetch/2 is defined by default plugin.
       end
 
       def store(job, options \\ []) do
@@ -126,12 +126,6 @@ defmodule Firefly.App do
   ```
   """
   @callback fetch(uid :: Firefly.Storage.uid) :: Firefly.Job.t
-
-  @doc false
-  def fetch(app, uid) do
-    app.new_job
-      |> Firefly.Job.add_step(Firefly.Plugin.Storage, :fetch, [uid])
-  end
 
   @doc ~S"""
   Save to app's storage backend.

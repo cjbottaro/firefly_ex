@@ -7,7 +7,10 @@ defmodule Firefly.Configuration do
     plugins: [],
     url_host: nil,
     url_prefix: nil,
-    url_format: ":job"
+    url_format: ":job",
+    response_headers: [
+      {"cache-control", "public, max-age=3600"}
+    ]
   ]
 
   @doc false
