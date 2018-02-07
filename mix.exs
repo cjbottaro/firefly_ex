@@ -32,6 +32,7 @@ defmodule Firefly.MixProject do
   defp deps do
     [
       {:plug, "~> 1.4"},
+      {:poison, "~> 3.1"},
       {:ex_doc, "~> 0.18.1", only: :dev},
     ]
   end

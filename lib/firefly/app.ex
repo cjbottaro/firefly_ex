@@ -1,4 +1,23 @@
 defmodule Firefly.App do
+  @moduledoc """
+  Use to define a Firefly app.
+
+  You interact with jobs and storage backends through an app.
+
+  ```elixir
+  defmodule MyFineApp do
+    use Firefly.App
+  end
+
+  uid = MyFineApp.read_file("~/Downloads/puppy.png")
+    |> MyFineApp.store
+
+  job = MyFineApp.fetch(uid)
+    |> MyFineApp.thumb("200x200#")
+  ```
+
+  Don't forget to configure your app with `Firefly.Configuration`.
+  """
 
   @typedoc """
   A Firefly app.
@@ -11,6 +30,12 @@ defmodule Firefly.App do
   `MyApp` would be this type.
   """
   @opaque t :: term
+
+  @typedoc """
+  Either a job or `{content, metadata}`.
+  """
+  @type storable :: Firefly.Job.t
+    | {Firefly.Storage.content, Firefly.Storage.metadata}
 
   defmacro __using__(_) do
     quote bind_quoted: [] do
@@ -48,50 +73,33 @@ defmodule Firefly.App do
         Firefly.App.fetch(__MODULE__, uid)
       end
 
-      def store(content, metadata \\ %{}, options \\ []) do
-        Firefly.App.store(__MODULE__, content, metadata, options)
+      def store(job, options \\ []) do
+        Firefly.App.store(__MODULE__, job, options)
       end
 
       def delete(uid) do
         Firefly.App.delete(__MODULE__, uid)
       end
 
+      def url(job) do
+        Firefly.App.url(__MODULE__, job)
+      end
+
       defdelegate run(job), to: Firefly.Job
+      defdelegate put_meta(job, meta), to: Firefly.App
 
     end
   end
 
-  @doc ~S"""
-  Convenience function to create a job with a fetch step.
-
-  Equivalent to:
-  ```elixir
-  MyApp.new_job |> MyApp.fetch(uid)
-  ```
+  @doc """
+  Do dynamic configuration in this callback.
   """
-  @callback fetch(uid :: Firefly.Storage.uid) :: Firefly.Job.t
+  @callback init(config :: Keyword.t) :: Keyword.t
 
-  @doc ~S"""
-  Store content to app's storage backend.
+  @doc """
+  App's configuration.
   """
-  @callback store(content :: Firefly.Storage.content) :: Firefly.Storage.uid
-
-  @doc ~S"""
-  Store content and metadata to app's storage backend.
-  """
-  @callback store(
-    content :: Firefly.Storage.content,
-    metadata :: Firefly.Storage.metadata
-  ) :: Firefly.Storage.uid
-
-  @doc ~S"""
-  Store content and metadata to app's storage backend with options.
-  """
-  @callback store(
-    content :: Firefly.Storage.content,
-    metadata :: Firefly.Storage.metadata,
-    options :: Firefly.Storage.options
-  ) :: Firefly.Storage.uid
+  @callback config :: Firefly.Configuration.t
 
   @doc ~S"""
   Run a job for this app.
@@ -109,20 +117,121 @@ defmodule Firefly.App do
   """
   @callback new_job :: Firefly.Job.t
 
+  @doc ~S"""
+  Convenience function to create a job with a fetch step.
+
+  Equivalent to:
+  ```elixir
+  MyApp.new_job |> MyApp.fetch(uid)
+  ```
+  """
+  @callback fetch(uid :: Firefly.Storage.uid) :: Firefly.Job.t
+
   @doc false
   def fetch(app, uid) do
     app.new_job
       |> Firefly.Job.add_step(Firefly.Plugin.Storage, :fetch, [uid])
   end
 
+  @doc ~S"""
+  Save to app's storage backend.
+  """
+  @callback store(storable) :: Firefly.Storage.uid
+
+  @doc ~S"""
+  Save to app's storage backend using options.
+
+  See the storage backend's documentation for the options.
+  """
+  @callback store(
+    storable,
+    options :: Firefly.Storage.options
+  ) :: Firefly.Storage.uid
+
   @doc false
-  def store(app, content, metadata, options) do
+  def store(app, {content, metadata}, options) do
     app.config.storage.write(app, content, metadata, options)
   end
 
   @doc false
+  def store(app, %{content: content, metadata: metadata}, options) do
+    app.config.storage.write(app, content, metadata, options)
+  end
+
+  @doc ~S"""
+  Delete an item from storage backend.
+  """
+  @callback delete(Firefly.Storage.uid) :: any
+
+  @doc false
   def delete(app, uid) do
     app.config.storage.delete(app, uid)
+  end
+
+  @type metadata :: Keyword.t
+    | Map.t
+    | (Firefly.Job.metadata -> Firefly.Job.metadata)
+
+  @doc """
+  Update a job's metadata.
+
+  This _does not_ create a job step; it updates the metadata immediately. It
+  can be called before or after `c:Firefly.App.run/1`.
+
+  If a keyword list or map is given, then the contents are merged with the
+  existing metadata.
+
+  Ex:
+  ```elixir
+    MyApp.new_job
+      |> MyApp.read_file("~/Downloads/puppy.png")
+      |> MyApp.identify
+      |> MyApp.run
+      |> MyApp.put_meta([name: "puppy.png"])
+      |> MyApp.put_meta(%{foo: "bar", bar: "baz"})
+      |> MyApp.put_meta(fn meta ->
+        Map.put(meta, :aspect_ratio, meta.width / meta.height)
+      end)
+  ```
+  """
+  @callback put_meta(job :: Firefly.Job.t, metadata) :: Firefly.Job.t
+
+  @doc false
+  def put_meta(job, func) when is_function(func) do
+    %{ job | metadata: func.(job.metadata) }
+  end
+
+  @doc false
+  def put_meta(job, metadata) do
+    %{ job | metadata: Map.merge(job.metadata, Map.new(metadata))}
+  end
+
+  @doc ~S"""
+  Generate a url that will run and serve a job.
+
+  ```elixir
+  url = MyApp.new_job
+    |> MyApp.fetch(uid)
+    |> MyApp.thumb("200x200#")
+    |> MyApp.url
+  ```
+
+  Now assuming you have your `Firefly.Plug` setup, you can hit that url
+  in a web browser and it should be served up.
+  """
+  @callback url(job :: Firefly.Job.t) :: String.t
+
+  @doc false
+  def url(app, job) do
+    format = app.config.url_format
+      |> String.replace(":job", Firefly.Job.encode(job))
+    format = Enum.reduce(job.metadata, format, fn {k, v}, acc ->
+      String.replace(acc, "%#{k}", to_string(v))
+    end)
+
+    [app.config.url_host, app.config.url_prefix, format]
+      |> Enum.join("/")
+      |> String.replace(~r/\/+/, "/")
   end
 
   @doc false

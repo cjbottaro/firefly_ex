@@ -1,5 +1,13 @@
 defmodule Firefly.Configuration do
 
+  @type t :: %{optional(atom) => term}
+
+  @defaults [
+    url_host: nil,
+    url_prefix: nil,
+    url_format: ":job"
+  ]
+
   def init do
     Application.get_all_env(:firefly)
       |> Enum.filter(&is_app?/1)
@@ -7,7 +15,8 @@ defmodule Firefly.Configuration do
   end
 
   defp configure({app, options}) do
-    config = resolve_config(app, options)
+    config = Keyword.merge(@defaults, options)
+    config = resolve_config(app, config)
     Application.put_env(:firefly, app, config)
     app.config.storage.init(app)
   end

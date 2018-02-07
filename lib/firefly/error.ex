@@ -1,4 +1,5 @@
 defmodule Firefly.Error do
+  @moduledoc false
 
   defmodule NotFound do
     defexception [:storage, :uid]

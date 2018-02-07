@@ -1,4 +1,8 @@
 defmodule Firefly.Plugin.Default do
+  @moduledoc """
+  Included in all apps by default.
+  """
+
   use Firefly.Plugin
 
   @doc """

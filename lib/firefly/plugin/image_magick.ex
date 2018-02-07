@@ -1,4 +1,8 @@
 defmodule Firefly.Plugin.ImageMagick do
+  @moduledoc """
+  For manipulating image assets.
+  """
+
   use Firefly.Plugin
 
   alias Firefly.{Job, Utils}
@@ -27,6 +31,15 @@ defmodule Firefly.Plugin.ImageMagick do
   400x300*    Crop with center gravity.
   400x300*ne  Crop with northeast gravity.
   ```
+
+  Ex:
+  ```elixir
+  MyApp.new_job
+    |> MyApp.read_file("~/puppy.png")
+    |> MyApp.thumb("200x200#")
+    |> MyApp.write_file("~/thumb.png")
+    |> MyApp.run
+  ```
   """
   @spec thumb(Job.t, String.t) :: Job.t
   def thumb(job, spec) do
@@ -52,8 +65,11 @@ defmodule Firefly.Plugin.ImageMagick do
 
   Ex:
   ```
-  job = MyApp.fetch_file("~/puppy.png") |> MyApp.identify
-  job.metadata.identify # => %{height: 640, size: 582556, type: "PNG", width: 428}
+  job = MyApp.new_job
+    |> MyApp.read_file("~/puppy.png")
+    |> MyApp.identify
+    |> MyApp.run
+  job.metadata # => %{height: 640, size: 582556, type: "PNG", width: 428}
   ```
   """
   @spec identify(Job.t) :: Job.t
@@ -74,7 +90,7 @@ defmodule Firefly.Plugin.ImageMagick do
 
   Ex:
   ```
-  MyApp.fetch_file("~/puppy.png") |> MyApp.rotate(90)
+  MyApp.rotate(job, 90)
   """
   @spec rotate(Job.t, String.t | integer) :: Job.t
   def rotate(job, degrees) do

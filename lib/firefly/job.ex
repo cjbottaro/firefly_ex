@@ -35,10 +35,11 @@ defmodule Firefly.Job do
   def encode(job) do
     steps = job.steps
       |> Enum.map(fn step -> {step.plugin, step.func, step.args} end)
-      |> :erlang.term_to_binary
+    {job.app, steps}
+      |> inspect
+      # |> :erlang.term_to_binary
       |> :zlib.zip
       |> Base.url_encode64
-    {job.app, steps}
   end
 
   @doc false
