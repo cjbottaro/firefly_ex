@@ -36,25 +36,25 @@ defmodule Firefly.Job do
     steps = job.steps
       |> Enum.map(fn step -> {step.plugin, step.func, step.args} end)
     {job.app, steps}
-      |> inspect
-      # |> :erlang.term_to_binary
+      |> :erlang.term_to_binary
       |> :zlib.zip
       |> Base.url_encode64
   end
 
   @doc false
-  def decode(encoded_steps) do
-    {app, steps} = encoded_steps
-      |> Base.url_decode64!
-      |> :zlib.unzip
-      |> :erlang.binary_to_term
-    steps = Enum.map(steps, &Step.from_tuple/1)
-    %__MODULE__{app: app, steps: steps}
-  end
-
-  @doc false
-  def path(job) do
-    "/firefly/" <> encode(job)
+  def decode(encoded) do
+    try do
+      encoded
+        |> Base.url_decode64!
+        |> :zlib.unzip
+        |> :erlang.binary_to_term
+    rescue
+      _ -> raise Firefly.Error.Encoding, message: encoded
+    else
+      {app, steps} ->
+        steps = Enum.map(steps, &Step.from_tuple/1)
+        %__MODULE__{app: app, steps: steps}
+    end
   end
 
   defp run(job, []), do: job

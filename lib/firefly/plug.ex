@@ -1,18 +1,23 @@
 defmodule Firefly.Plug do
   import Plug.Conn
-  alias Firefly.Job
+  alias Firefly.{Job, Url}
 
   def init(app), do: app
 
   def call(conn, app) do
-    job = conn.path_info
-      |> Enum.at(1)
-      |> Job.decode
-      |> Job.run
+    try do
+      job = Url.extract_job(app, conn.path_info)
+        |> Job.decode
+        |> Job.run
 
-    conn
-      |> send_resp(200, job.content)
-      |> halt
+      conn
+        |> send_resp(200, job.content)
+        |> halt
+    rescue
+      e in [Firefly.Error.Encoding] ->
+        send_resp(conn, 500, "failed to decode job: #{e.message}")
+          |> halt
+    end
   end
 
 end

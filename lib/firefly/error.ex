@@ -14,4 +14,8 @@ defmodule Firefly.Error do
     end
   end
 
+  defmodule Encoding do
+    defexception [:message]
+  end
+
 end

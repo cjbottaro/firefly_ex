@@ -223,15 +223,7 @@ defmodule Firefly.App do
 
   @doc false
   def url(app, job) do
-    format = app.config.url_format
-      |> String.replace(":job", Firefly.Job.encode(job))
-    format = Enum.reduce(job.metadata, format, fn {k, v}, acc ->
-      String.replace(acc, "%#{k}", to_string(v))
-    end)
-
-    [app.config.url_host, app.config.url_prefix, format]
-      |> Enum.join("/")
-      |> String.replace(~r/\/+/, "/")
+    Firefly.Url.make(app, job)
   end
 
   @doc false

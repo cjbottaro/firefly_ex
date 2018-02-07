@@ -1,3 +1,3 @@
 defmodule FireflyApp do
-  use Firefly.App
+  # use Firefly.App
 end
