@@ -3,11 +3,24 @@ defmodule Firefly.Configuration do
   @type t :: %{optional(atom) => term}
 
   @defaults [
+    storage: nil,
+    plugins: [],
     url_host: nil,
     url_prefix: nil,
     url_format: ":job"
   ]
 
+  @doc false
+  # Only meant to be called at compile time, i.e. when compiling modules
+  # that use Firefly.App.
+  def get_compile_time(app) do
+    config = Application.get_env(:firefly, app, [])
+    Keyword.merge(@defaults, config)
+  end
+
+  @doc false
+  # Call from application startup. Resolves dynamic config, writes final
+  # config back to Application env. Also initializes storage backends, etc.
   def init do
     Application.get_all_env(:firefly)
       |> Enum.filter(&is_app?/1)

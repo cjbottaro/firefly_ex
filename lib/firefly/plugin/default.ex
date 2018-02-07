@@ -16,6 +16,32 @@ defmodule Firefly.Plugin.Default do
   end
 
   @doc """
+  Fetch content from a url.
+
+  Will populate `:"content-type"` in metdata if possible.
+  """
+  def fetch_url(job, url) do
+    url = to_charlist(url)
+
+    # Why is erlang shit so ugly?
+    {:ok, resp} = :httpc.request(:get, {url, []}, [], [body_format: :binary])
+    {{_, 200, 'OK'}, headers, body} = resp
+
+    content_type = Enum.find_value(headers, fn {header, value} ->
+      case header do
+        'content-type' -> to_string(value)
+        _ -> nil
+      end
+    end)
+
+    if content_type do
+      %{ job | content: body } |> put_meta(:"content-type", content_type)
+    else
+      %{ job | content: body }
+    end
+  end
+
+  @doc """
   Read a file from the filesystem.
   """
   def read_file(job, path) do

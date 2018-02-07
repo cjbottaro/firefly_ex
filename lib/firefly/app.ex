@@ -228,7 +228,7 @@ defmodule Firefly.App do
 
   @doc false
   def delegates_for_app(app) do
-    config = Application.get_env(:firefly, app, [])
+    config = Firefly.Configuration.get_compile_time(app)
     plugins = [Firefly.Plugin.Default | config[:plugins]]
     Enum.flat_map(plugins, &delegates_for_plugin/1)
   end
