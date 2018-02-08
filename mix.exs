@@ -17,6 +17,13 @@ defmodule Firefly.MixProject do
         licenses: ["GNU General Public License v3.0"],
         links: %{"GitHub" => "https://github.com/cjbottaro/firefly_ex"},
       ],
+
+      docs: [
+        extras: [
+          "README.md": [title: "README", name: "readme"],
+        ],
+        main: "readme",
+      ]
     ]
   end
 
