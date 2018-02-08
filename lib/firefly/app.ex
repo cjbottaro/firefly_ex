@@ -129,13 +129,17 @@ defmodule Firefly.App do
 
   @doc ~S"""
   Save to app's storage backend.
+
+  If `storable` is a `t:Firefly.Job.t/0` then it will be run first.
   """
   @callback store(storable) :: Firefly.Storage.uid
 
   @doc ~S"""
   Save to app's storage backend using options.
 
-  See the storage backend's documentation for the options.
+  If `storable` is a `t:Firefly.Job.t/0` then it will be run first.
+
+  See the storage backend's documentation for valid options.
   """
   @callback store(
     storable,
@@ -148,7 +152,8 @@ defmodule Firefly.App do
   end
 
   @doc false
-  def store(app, %{content: content, metadata: metadata}, options) do
+  def store(app, %Firefly.Job{} = job, options) do
+    %{content: content, metadata: metadata} = app.run(job)
     app.config.storage.write(app, content, metadata, options)
   end
 
@@ -179,9 +184,9 @@ defmodule Firefly.App do
   ```elixir
     MyApp.new_job
       |> MyApp.read_file("~/Downloads/puppy.png")
+      |> MyApp.put_meta(name: "puppy.png")
       |> MyApp.identify
       |> MyApp.run
-      |> MyApp.put_meta([name: "puppy.png"])
       |> MyApp.put_meta(%{foo: "bar", bar: "baz"})
       |> MyApp.put_meta(fn meta ->
         Map.put(meta, :aspect_ratio, meta.width / meta.height)
